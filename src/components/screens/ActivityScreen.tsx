@@ -1,0 +1,252 @@
+"use client";
+
+import React, { useState } from "react";
+import {
+  Search,
+  ChevronRight,
+  Receipt,
+  Building,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
+  XCircle,
+  ArrowRight,
+  ReceiptText,
+  Clock,
+  Shield,
+  Sparkles
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+
+const filterConfig = {
+  all: { label: "All", color: "slate" },
+  claimable: { label: "Claimable", color: "emerald" },
+  pending: { label: "Pending", color: "amber" },
+  failed: { label: "Failed", color: "rose" },
+};
+
+const transactions = [
+  {
+    id: 1,
+    merchant: "Apple Store Malaysia",
+    date: "12 Oct",
+    amount: 4299.00,
+    source: "Visa •••• 1234",
+    status: "claimable",
+    category: "Lifestyle",
+    eInvoice: true,
+  },
+  {
+    id: 2,
+    merchant: "AIA Malaysia",
+    date: "10 Oct",
+    amount: 250.00,
+    source: "Maybank",
+    status: "pending",
+    category: "Insurance",
+    eInvoice: false,
+  },
+  {
+    id: 3,
+    merchant: "Popular Bookstore",
+    date: "08 Oct",
+    amount: 128.50,
+    source: "TNG eWallet",
+    status: "claimable",
+    category: "Lifestyle",
+    eInvoice: true,
+  },
+  {
+    id: 4,
+    merchant: "Gym Membership",
+    date: "05 Oct",
+    amount: 120.00,
+    source: "Visa •••• 1234",
+    status: "claimable",
+    category: "Sports",
+    eInvoice: true,
+  },
+  {
+    id: 5,
+    merchant: "Klinik HealthCare",
+    date: "02 Oct",
+    amount: 350.00,
+    source: "Public Bank",
+    status: "pending",
+    category: "Medical",
+    eInvoice: true,
+  },
+  {
+    id: 6,
+    merchant: "Restaurant ABC",
+    date: "01 Oct",
+    amount: 42.00,
+    source: "Cash",
+    status: "failed",
+    category: "Food",
+    eInvoice: false,
+  },
+];
+
+const categoryIcons: Record<string, React.ReactNode> = {
+  Lifestyle: <Receipt className="w-5 h-5" />,
+  Insurance: <Shield className="w-5 h-5" />,
+  Sports: <Building className="w-5 h-5" />,
+  Medical: <HelpCircle className="w-5 h-5" />,
+  Food: <ReceiptText className="w-5 h-5" />,
+};
+
+const statusConfig = {
+  claimable: {
+    label: "Claimable",
+    badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    indicator: "bg-emerald-500",
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />
+  },
+  pending: {
+    label: "Need docs",
+    badge: "bg-amber-100 text-amber-700 border-amber-200",
+    indicator: "bg-amber-500",
+    icon: <Clock className="w-3.5 h-3.5" />
+  },
+  failed: {
+    label: "Not eligible",
+    badge: "bg-slate-100 text-slate-500 border-slate-200",
+    indicator: "bg-slate-300",
+    icon: <XCircle className="w-3.5 h-3.5" />
+  },
+};
+
+export function ActivityScreen({
+  onTransactionClick
+}: {
+  onTransactionClick: (t: any) => void
+}) {
+  const [activeFilter, setActiveFilter] = useState<keyof typeof filterConfig>("all");
+
+  const filteredTransactions = activeFilter === "all"
+    ? transactions
+    : transactions.filter(t => t.status === activeFilter);
+
+  return (
+    <div className="flex flex-col bg-slate-50 min-h-full">
+      {/* Header */}
+      <div className="px-5 pt-14 pb-6 bg-white border-b border-slate-100">
+        <div className="flex justify-between items-center mb-5">
+          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Activity</h2>
+          <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-blue-600" />
+          </div>
+        </div>
+
+        {/* Search bar - simple, no shadow */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            placeholder="Search transactions"
+            className="pl-11 h-11 rounded-xl bg-slate-50 border-transparent focus-visible:ring-1 focus-visible:ring-blue-500 font-medium placeholder:text-slate-400"
+          />
+        </div>
+      </div>
+
+      {/* Filter tabs - simple underline style */}
+      <div className="flex gap-1 px-5 py-4 bg-white border-b border-slate-100">
+        {(Object.keys(filterConfig) as Array<keyof typeof filterConfig>).map((filter) => {
+          const config = filterConfig[filter];
+          const isActive = activeFilter === filter;
+          return (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              className={cn(
+                "px-4 py-2 rounded-lg text-xs font-semibold transition-all capitalize",
+                isActive
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-500 hover:bg-slate-100"
+              )}
+            >
+              {config.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Transaction list - clean, minimal */}
+      <div className="flex-1 px-5 py-6">
+        {filteredTransactions.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+              <Receipt className="w-8 h-8 text-slate-300" />
+            </div>
+            <p className="text-sm font-medium text-slate-400">No transactions found</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredTransactions.map((t, i) => {
+              const status = statusConfig[t.status as keyof typeof statusConfig];
+              return (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  onClick={() => onTransactionClick(t)}
+                  className="group"
+                >
+                  <div className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all cursor-pointer">
+                    {/* Category icon with status ring */}
+                    <div className="relative">
+                      <div className={cn(
+                        "w-12 h-12 rounded-2xl flex items-center justify-center",
+                        t.status === "claimable" ? "bg-emerald-50 text-emerald-600" :
+                        t.status === "pending" ? "bg-amber-50 text-amber-600" :
+                        "bg-slate-100 text-slate-400"
+                      )}>
+                        {categoryIcons[t.category] || <Receipt className="w-5 h-5" />}
+                      </div>
+                      {/* Status dot */}
+                      <div className={cn(
+                        "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center",
+                        status.indicator
+                      )}>
+                        {t.status === "claimable" && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                        {t.status === "pending" && <Clock className="w-2.5 h-2.5 text-white" />}
+                        {t.status === "failed" && <XCircle className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                    </div>
+
+                    {/* Main content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <h4 className="text-sm font-semibold text-slate-900 truncate">{t.merchant}</h4>
+                        <span className="text-base font-bold text-slate-900 flex-shrink-0">RM {t.amount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-400">{t.source}</span>
+                        <span className="text-slate-200">•</span>
+                        <span className="text-xs text-slate-400">{t.date}</span>
+                        {t.eInvoice && (
+                          <Badge variant="outline" className="text-[9px] font-medium px-1.5 py-0 bg-blue-50 text-blue-600 border-blue-100 rounded-md ml-1">
+                            e-Invoice
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Arrow indicator */}
+                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
