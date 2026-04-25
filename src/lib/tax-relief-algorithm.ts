@@ -455,7 +455,7 @@ export const TAX_RELIEF_KEYWORDS: Record<TaxReliefCategory, string[]> = {
   ],
 
   provident_fund: [
-    'epf', 'kwsp', 'kwsp contribution', 'epf contribution', 'caruman kwsp'
+    'epf', 'kwsp', 'kwsp contribution', 'epf contribution', 'caruman kwsp', 'sspn', 'sspn contribution', 'ssn'
   ],
 
   social_security: [

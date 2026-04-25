@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Bell,
   ShieldCheck,
@@ -22,13 +22,16 @@ import {
   Crown,
   CheckCircle2,
   ArrowRight,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+
+const TEST_USER_ID = 'user-001';
 
 const stagger = {
   container: { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.1 } } },
@@ -94,6 +97,7 @@ const categoryColors = {
   education: { bg: "bg-slate-400", text: "text-slate-500", light: "bg-slate-50", progress: "bg-slate-400" },
 };
 
+// Mock data for fallback
 const mockData = {
   totalRelief: 4850,
   potential: 1420,
@@ -121,7 +125,100 @@ const statusConfig = {
   empty: { label: "Not started", variant: "neutral" as const },
 };
 
-export function HomeScreen({ onNavigate }: { onNavigate: (screen: any) => void }) {
+interface ReliefSummary {
+  totalRelief: number;
+  potential: number;
+  remaining: number;
+  pendingItems: number;
+  categories: Array<{
+    key: string;
+    name: string;
+    amount: number;
+    limit: number;
+    status: string;
+  }>;
+  attentionItems: Array<{
+    title: string;
+    category: string;
+    amount: string;
+    issue: string;
+    badge: string;
+  }>;
+}
+
+interface HomeScreenProps {
+  onNavigate: (screen: any) => void;
+  onCategoryClick?: (category: { key: string; name: string; amount: number; limit: number; status: string; shortName: string }) => void;
+}
+
+export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
+  const [data, setData] = useState<ReliefSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchReliefSummary = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/relief-summary?userId=${TEST_USER_ID}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch relief summary');
+        }
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          // Transform API response to match expected format
+          const apiData = result.data;
+          setData({
+            totalRelief: apiData.claimed_amount || apiData.total_relief_amount || apiData.totalRelief || 0,
+            potential: apiData.max_amount || apiData.potential || 0,
+            remaining: apiData.remaining_quota || apiData.remaining || 0,
+            pendingItems: apiData.pending_items || apiData.pendingItems || 0,
+            categories: apiData.categories || mockData.categories,
+            attentionItems: apiData.attention_items || apiData.attentionItems || [],
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching relief summary:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+        // Fallback to mock data on error
+        setData(mockData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReliefSummary();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col bg-slate-50 min-h-full pb-10">
+        <div className="px-5 pt-16 pb-6 bg-white border-b border-slate-100">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-slate-200 rounded-full animate-pulse" />
+              <div>
+                <div className="h-6 w-24 bg-slate-200 rounded animate-pulse" />
+                <div className="h-4 w-32 bg-slate-200 rounded animate-pulse mt-2" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="px-5 pt-6 space-y-6">
+          <div className="h-48 bg-slate-200 rounded-3xl animate-pulse" />
+          <div className="grid grid-cols-4 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-20 bg-slate-200 rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const displayData = data || mockData;
+
   return (
     <div className="flex flex-col bg-slate-50 min-h-full pb-10">
       {/* Header */}
@@ -145,7 +242,9 @@ export function HomeScreen({ onNavigate }: { onNavigate: (screen: any) => void }
           </div>
           <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-2xl bg-slate-100 text-slate-500 hover:bg-slate-200">
             <Bell className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
+            {displayData.pendingItems > 0 && (
+              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
+            )}
           </Button>
         </div>
       </motion.div>
@@ -171,25 +270,25 @@ export function HomeScreen({ onNavigate }: { onNavigate: (screen: any) => void }
                   <span className="text-white/80 text-xs font-semibold uppercase tracking-widest">Relief Wallet</span>
                 </div>
                 <Badge className="bg-emerald-400 text-white text-[10px] font-semibold px-3 py-1 rounded-full shadow-sm">
-                  <CheckCircle2 className="w-3 h-3 mr-1" /> {mockData.pendingItems} to review
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> {displayData.pendingItems} to review
                 </Badge>
               </div>
 
               <div className="mb-5">
                 <p className="text-white/50 text-[10px] font-semibold uppercase tracking-widest mb-1">Ready to Claim</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-bold text-white tracking-tight">RM {mockData.totalRelief.toLocaleString()}</span>
+                  <span className="text-5xl font-bold text-white tracking-tight">RM {displayData.totalRelief.toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-5 py-4 border-t border-white/20">
                 <div>
                   <p className="text-white/50 text-[10px] font-semibold uppercase tracking-widest mb-1">Potential</p>
-                  <p className="text-xl font-bold text-emerald-300">+RM {mockData.potential.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-emerald-300">+RM {displayData.potential.toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/50 text-[10px] font-semibold uppercase tracking-widest mb-1">Remaining</p>
-                  <p className="text-xl font-bold text-white">RM {mockData.remaining.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-white">RM {displayData.remaining.toLocaleString()}</p>
                 </div>
               </div>
 
@@ -240,58 +339,65 @@ export function HomeScreen({ onNavigate }: { onNavigate: (screen: any) => void }
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-slate-900">Pending Tasks</h2>
             <div className="h-5 w-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium">{mockData.attentionItems.length} items require your action</span>
+            <span className="text-xs text-slate-400 font-medium">{displayData.attentionItems.length} items require your action</span>
           </div>
 
           <div className="space-y-2">
-            {mockData.attentionItems.map((item, index) => {
-              const catConfig = categoryConfig[item.category as keyof typeof categoryConfig];
-              const IconComponent = catConfig.icon;
-              const isFirst = index === 0;
+            {displayData.attentionItems.length === 0 ? (
+              <div className="p-6 bg-white rounded-xl border border-slate-200 text-center">
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                <p className="text-sm text-slate-500">No pending tasks</p>
+              </div>
+            ) : (
+              displayData.attentionItems.map((item, index) => {
+                const catConfig = categoryConfig[item.category as keyof typeof categoryConfig];
+                const IconComponent = catConfig?.icon || BookOpen;
+                const isFirst = index === 0;
 
-              return (
-                <motion.div
-                  key={item.title}
-                  whileTap={{ scale: 0.99 }}
-                  className="group relative"
-                >
-                  {/* Number indicator - makes it feel like a numbered task list */}
-                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center z-10">
-                    {index + 1}
-                  </div>
+                return (
+                  <motion.div
+                    key={item.title}
+                    whileTap={{ scale: 0.99 }}
+                    className="group relative"
+                  >
+                    {/* Number indicator - makes it feel like a numbered task list */}
+                    <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center z-10">
+                      {index + 1}
+                    </div>
 
-                  {/* Connection line between items */}
-                  {index < mockData.attentionItems.length - 1 && (
-                    <div className="absolute left-[10px] top-full w-0.5 h-3 bg-slate-200" />
-                  )}
+                    {/* Connection line between items */}
+                    {index < displayData.attentionItems.length - 1 && (
+                      <div className="absolute left-[10px] top-full w-0.5 h-3 bg-slate-200" />
+                    )}
 
-                  <div className="pl-6 pr-4 py-4 bg-white rounded-xl border border-slate-200 shadow-sm">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${categoryColors[item.category as keyof typeof categoryColors].light} ${categoryColors[item.category as keyof typeof categoryColors].text}`}>
-                          <IconComponent className="w-5 h-5" />
+                    <div className="pl-6 pr-4 py-4 bg-white rounded-xl border border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${categoryColors[item.category as keyof typeof categoryColors]?.light || 'bg-slate-50'} ${categoryColors[item.category as keyof typeof categoryColors]?.text || 'text-slate-600'}`}>
+                            <IconComponent className="w-5 h-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-slate-400 font-medium mb-0.5">{item.title}</p>
+                            <p className="text-sm font-semibold text-slate-900 truncate">{item.issue}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-slate-400 font-medium mb-0.5">{item.title}</p>
-                          <p className="text-sm font-semibold text-slate-900 truncate">{item.issue}</p>
-                        </div>
-                      </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-500 font-medium">{item.amount}</span>
-                        <Button
-                          onClick={() => onNavigate("review")}
-                          size="sm"
-                          className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium"
-                        >
-                          {item.badge.split(' ')[0]} <ChevronRight className="w-3 h-3 ml-1" />
-                        </Button>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-500 font-medium">{item.amount}</span>
+                          <Button
+                            onClick={() => onNavigate("review")}
+                            size="sm"
+                            className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium"
+                          >
+                            {item.badge.split(' ')[0]} <ChevronRight className="w-3 h-3 ml-1" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })
+            )}
           </div>
         </motion.div>
 
@@ -299,30 +405,35 @@ export function HomeScreen({ onNavigate }: { onNavigate: (screen: any) => void }
         <motion.div variants={stagger.item} className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-900">Your Relief</h2>
-            <Button variant="ghost" className="text-xs text-blue-600 font-medium h-7 px-2">
+            <Button
+              variant="ghost"
+              onClick={() => onNavigate("summary")}
+              className="text-xs text-blue-600 font-medium h-7 px-2"
+            >
               See all <ChevronRight className="w-3 h-3 ml-1" />
             </Button>
           </div>
 
           {/* Horizontal scrolling list - more like a real wallet view */}
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
-            {mockData.categories.map((cat) => {
-              const catColors = categoryColors[cat.key as keyof typeof categoryColors];
+            {displayData.categories.map((cat) => {
+              const catColors = categoryColors[cat.key as keyof typeof categoryColors] || categoryColors.lifestyle;
               const status = statusConfig[cat.status as keyof typeof statusConfig] || statusConfig.available;
               const statusColors = colors[status.variant];
-              const pct = (cat.amount / cat.limit) * 100;
+              const pct = cat.limit > 0 ? (cat.amount / cat.limit) * 100 : 0;
               const remaining = cat.limit - cat.amount;
 
               return (
-                <motion.div
+                <motion.button
                   key={cat.name}
                   whileTap={{ scale: 0.97 }}
-                  className="flex-shrink-0 w-40 bg-white rounded-2xl p-4 border border-slate-200 shadow-sm"
+                  onClick={() => onCategoryClick?.({ ...cat, shortName: cat.name.substring(0, 4) })}
+                  className="flex-shrink-0 w-40 bg-white rounded-2xl p-4 border border-slate-200 shadow-sm text-left"
                 >
                   {/* Category header */}
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${catColors.light} ${catColors.text}`}>
-                      {React.createElement(categoryConfig[cat.key as keyof typeof categoryConfig].icon, { className: "w-4 h-4" })}
+                      {React.createElement(categoryConfig[cat.key as keyof typeof categoryConfig]?.icon || BookOpen, { className: "w-4 h-4" })}
                     </div>
                     <span className="text-sm font-semibold text-slate-900">{cat.name}</span>
                   </div>
@@ -341,7 +452,7 @@ export function HomeScreen({ onNavigate }: { onNavigate: (screen: any) => void }
                     <span className={`text-[9px] font-medium ${statusColors.text}`}>{status.label}</span>
                     <span className="text-[9px] text-slate-400">RM {remaining.toLocaleString()} left</span>
                   </div>
-                </motion.div>
+                </motion.button>
               );
             })}
           </div>
@@ -384,7 +495,11 @@ export function HomeScreen({ onNavigate }: { onNavigate: (screen: any) => void }
 
         {/* Footer hint */}
         <motion.div variants={stagger.item} className="text-center py-4">
-          <p className="text-xs text-slate-400 font-medium">Last synced: Today at 2:30 PM</p>
+          {error ? (
+            <p className="text-xs text-amber-500 font-medium">Using cached data. {error}</p>
+          ) : (
+            <p className="text-xs text-slate-400 font-medium">Last synced: Today at 2:30 PM</p>
+          )}
         </motion.div>
       </div>
     </div>

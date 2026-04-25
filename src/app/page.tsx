@@ -14,9 +14,19 @@ import { SummaryScreen } from "@/components/screens/SummaryScreen";
 import { ProfileScreen } from "@/components/screens/ProfileScreen";
 import { AnimatePresence, motion } from "framer-motion";
 
+interface Category {
+  key: string;
+  name: string;
+  amount: number;
+  limit: number;
+  status: string;
+  shortName: string;
+}
+
 export default function Home() {
   const [activeScreen, setActiveScreen] = useState<ScreenType>("onboarding");
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
   const handleNavigate = (screen: ScreenType) => {
     setActiveScreen(screen);
@@ -25,6 +35,11 @@ export default function Home() {
   const handleTransactionClick = (transaction: any) => {
     setSelectedTransaction(transaction);
     setActiveScreen("transaction_detail");
+  };
+
+  const handleCategoryClick = (category: Category) => {
+    setSelectedCategory(category);
+    setActiveScreen("summary");
   };
 
   const showBottomNav = !["onboarding", "consent", "transaction_detail", "upload"].includes(activeScreen);
@@ -36,7 +51,7 @@ export default function Home() {
       case "consent":
         return <ConsentScreen onBack={() => setActiveScreen("onboarding")} onConnect={() => setActiveScreen("home")} />;
       case "home":
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigate} onCategoryClick={handleCategoryClick} />;
       case "activity":
         return <ActivityScreen onTransactionClick={handleTransactionClick} />;
       case "transaction_detail":
@@ -48,17 +63,17 @@ export default function Home() {
       case "review":
         return <ClaimsReviewScreen onBack={() => setActiveScreen("home")} />;
       case "summary":
-        return <SummaryScreen onNavigate={handleNavigate} />;
+        return <SummaryScreen onNavigate={handleNavigate} initialCategory={selectedCategory} onBack={() => setSelectedCategory(null)} />;
       case "profile":
         return <ProfileScreen />;
       default:
-        return <HomeScreen onNavigate={handleNavigate} />;
+        return <HomeScreen onNavigate={handleNavigate} onCategoryClick={handleCategoryClick} />;
     }
   };
 
   return (
-    <AppShell 
-      activeScreen={activeScreen} 
+    <AppShell
+      activeScreen={activeScreen}
       onNavigate={handleNavigate}
       showBottomNav={showBottomNav}
     >

@@ -1,54 +1,29 @@
-import { NextResponse } from 'next/server';
-import * as fs from 'fs';
-import * as path from 'path';
+import { NextRequest, NextResponse } from 'next/server';
+import { getUserRecords } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Path to the generated records directory
-    const recordsDir = path.join(process.cwd(), 'customer_records');
-    
-    // Check if the directory exists
-    if (!fs.existsSync(recordsDir)) {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Records directory not found. Have you generated them yet?' }, 
-        { status: 404 }
+        { error: 'userId is required' },
+        { status: 400 }
       );
     }
 
-    const files = fs.readdirSync(recordsDir);
-    const records = [];
-
-    // Read every JSON file in the directory
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        const filePath = path.join(recordsDir, file);
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        try {
-          const jsonData = JSON.parse(fileContent);
-          records.push(jsonData);
-        } catch (parseError) {
-          console.error(`Failed to parse file ${file}:`, parseError);
-        }
-      }
-    }
-
-    // Sort the records by date to keep them ordered
-    records.sort((a, b) => {
-      const dateA = new Date(a.dateRange?.from || 0).getTime();
-      const dateB = new Date(b.dateRange?.from || 0).getTime();
-      return dateA - dateB;
-    });
+    const records = await getUserRecords(userId);
 
     return NextResponse.json({
       success: true,
+      data: records,
       count: records.length,
-      data: records
     });
-    
   } catch (error) {
-    console.error('Error reading records:', error);
+    console.error('Error fetching records:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' }, 
+      { error: 'Failed to fetch records' },
       { status: 500 }
     );
   }

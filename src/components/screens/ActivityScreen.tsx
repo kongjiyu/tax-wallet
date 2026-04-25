@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Search,
   ChevronRight,
@@ -14,7 +14,8 @@ import {
   ReceiptText,
   Clock,
   Shield,
-  Sparkles
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,6 +24,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
+const TEST_USER_ID = 'user-001';
+
 const filterConfig = {
   all: { label: "All", color: "slate" },
   claimable: { label: "Claimable", color: "emerald" },
@@ -30,7 +33,7 @@ const filterConfig = {
   failed: { label: "Failed", color: "rose" },
 };
 
-const transactions = [
+const mockTransactions = [
   {
     id: 1,
     merchant: "Apple Store Malaysia",
@@ -122,12 +125,84 @@ const statusConfig = {
   },
 };
 
+interface Transaction {
+  id: number;
+  merchant: string;
+  date: string;
+  amount: number;
+  source: string;
+  status: string;
+  category: string;
+  eInvoice: boolean;
+}
+
 export function ActivityScreen({
   onTransactionClick
 }: {
   onTransactionClick: (t: any) => void
 }) {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<keyof typeof filterConfig>("all");
+
+  useEffect(() => {
+    const fetchRecords = async () => {
+      try {
+        setLoading(true);
+        // Use categorize endpoint to get proper status
+        const response = await fetch(`/api/records/categorize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: TEST_USER_ID }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch records');
+        }
+        const result = await response.json();
+
+        if (result.success && result.data && Array.isArray(result.data)) {
+          // Transform categorized records to match expected format
+          const transformedTransactions: Transaction[] = result.data.map((item: any, index: number) => {
+            // Determine status based on categorization
+            let status = 'pending';
+            if (item.requiresReview || item.proofRequired === 'required') {
+              status = 'pending';
+            } else if (item.taxReliefCategory && item.incomeCategory === 'non_income') {
+              status = 'claimable';
+            } else if (item.incomeCategory === 'income' || item.transactionType === 'individual_to_individual') {
+              status = 'failed';
+            }
+
+            return {
+              id: item.transaction.id || `txn-${index}`,
+              merchant: item.transaction.counterpartyName || 'Unknown',
+              date: item.transaction.date ? new Date(item.transaction.date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short' }) : 'N/A',
+              amount: Number(item.transaction.amount) || 0,
+              source: item.transaction.source || item.transaction.institution || 'bank',
+              status,
+              category: item.taxReliefCategory || 'other',
+              eInvoice: false,
+            };
+          });
+          setTransactions(transformedTransactions);
+        } else {
+          // Use mock data if no records found
+          setTransactions(mockTransactions);
+        }
+      } catch (err) {
+        console.error('Error fetching records:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+        // Fallback to mock data on error
+        setTransactions(mockTransactions);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecords();
+  }, []);
 
   const filteredTransactions = activeFilter === "all"
     ? transactions
@@ -178,7 +253,11 @@ export function ActivityScreen({
 
       {/* Transaction list - clean, minimal */}
       <div className="flex-1 px-5 py-6">
-        {filteredTransactions.length === 0 ? (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+          </div>
+        ) : filteredTransactions.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
               <Receipt className="w-8 h-8 text-slate-300" />
@@ -188,7 +267,7 @@ export function ActivityScreen({
         ) : (
           <div className="space-y-3">
             {filteredTransactions.map((t, i) => {
-              const status = statusConfig[t.status as keyof typeof statusConfig];
+              const status = statusConfig[t.status as keyof typeof statusConfig] || statusConfig.pending;
               return (
                 <motion.div
                   key={t.id}
