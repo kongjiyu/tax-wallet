@@ -1,0 +1,52 @@
+{
+  "userId": "USR-001",
+  "consentId": "CONSENT-2025-ABC",
+  "dateRange": {
+    "from": "2025-04-02",
+    "to": "2025-04-02"
+  },
+  "financialRecords": [
+    {
+      "recordId": "REC-0402-01",
+      "date": "2025-04-02",
+      "amount": 138.0,
+      "currency": "MYR",
+      "direction": "INFLOW",
+      "source": {
+        "institution": "MAYBANK",
+        "accountRef": "ACC-***-7890",
+        "transactionRef": "TXN-2025-04-02-01",
+        "paymentMethod": "DEBIT_CARD"
+      },
+      "invoice": {
+        "uuid": "INV-UUID-2025-04-02",
+        "invoiceNumber": "INV-20250402",
+        "status": "VALID",
+        "supplier": {
+          "name": "DAILY MART SDN BHD",
+          "tin": "C1234567890",
+          "registrationNo": "1234567890"
+        },
+        "lineItems": [
+          {
+            "description": "Daily Groceries",
+            "classificationCode": "47110",
+            "quantity": 1,
+            "unitPrice": 138.0,
+            "taxAmount": 0.0,
+            "totalAmount": 138.0
+          }
+        ],
+        "totalAmount": 138.0
+      }
+    }
+  ],
+  "summary": {
+    "totalRecords": 1,
+    "totalOutflow": 0.0,
+    "totalInflow": 138.0,
+    "institutionsIncluded": [
+      "MAYBANK"
+    ]
+  }
+}

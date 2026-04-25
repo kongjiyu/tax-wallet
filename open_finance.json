@@ -1,0 +1,150 @@
+{
+  "userId": "USR-001",
+  "consentId": "CONSENT-2025-ABC",
+  "dateRange": {
+    "from": "2025-01-01",
+    "to": "2025-12-31"
+  },
+  "financialRecords": [
+    {
+      "recordId": "REC-001",
+      "date": "2025-03-15",
+      "amount": 150.00,
+      "currency": "MYR",
+      "direction": "OUTFLOW",
+      "source": {
+        "institution": "MAYBANK",
+        "accountRef": "ACC-***-7890",
+        "transactionRef": "POS-KL-MIDVALLEY-0032",
+        "paymentMethod": "DEBIT_CARD"
+      },
+      "invoice": {
+        "uuid": "INV-UUID-001",
+        "invoiceNumber": "MPH-2025-3344",
+        "status": "VALID",
+        "supplier": {
+          "name": "MPH BOOKSTORES SDN BHD",
+          "tin": "C19901005678",
+          "registrationNo": "199001005678"
+        },
+        "lineItems": [
+          {
+            "description": "The Psychology of Money - Morgan Housel",
+            "classificationCode": "47610",
+            "quantity": 1,
+            "unitPrice": 69.90,
+            "taxAmount": 0.00,
+            "totalAmount": 69.90
+          },
+          {
+            "description": "Atomic Habits - James Clear",
+            "classificationCode": "47610",
+            "quantity": 1,
+            "unitPrice": 80.10,
+            "taxAmount": 0.00,
+            "totalAmount": 80.10
+          }
+        ],
+        "totalAmount": 150.00
+      }
+    },
+    {
+      "recordId": "REC-002",
+      "date": "2025-03-16",
+      "amount": 342.00,
+      "currency": "MYR",
+      "direction": "OUTFLOW",
+      "source": {
+        "institution": "MAYBANK",
+        "accountRef": "ACC-***-7890",
+        "transactionRef": "FPX-20250316-ABC123",
+        "paymentMethod": "FPX"
+      },
+      "invoice": {
+        "uuid": "INV-UUID-002",
+        "invoiceNumber": "SMC-2025-0891",
+        "status": "VALID",
+        "supplier": {
+          "name": "SUNWAY MEDICAL CENTRE SDN BHD",
+          "tin": "C20051012345",
+          "registrationNo": "200501012345"
+        },
+        "lineItems": [
+          {
+            "description": "General Consultation - Dr Ahmad",
+            "classificationCode": "86101",
+            "quantity": 1,
+            "unitPrice": 150.00,
+            "taxAmount": 0.00,
+            "totalAmount": 150.00
+          },
+          {
+            "description": "Paracetamol 500mg x 20",
+            "classificationCode": "21009",
+            "quantity": 1,
+            "unitPrice": 12.00,
+            "taxAmount": 0.00,
+            "totalAmount": 12.00
+          },
+          {
+            "description": "Blood Test - Full Panel",
+            "classificationCode": "86903",
+            "quantity": 1,
+            "unitPrice": 180.00,
+            "taxAmount": 0.00,
+            "totalAmount": 180.00
+          }
+        ],
+        "totalAmount": 342.00
+      }
+    },
+    {
+      "recordId": "REC-003",
+      "date": "2025-03-20",
+      "amount": 250.00,
+      "currency": "MYR",
+      "direction": "OUTFLOW",
+      "source": {
+        "institution": "CIMB",
+        "accountRef": "ACC-***-4321",
+        "transactionRef": "DC-20250401-DEF",
+        "paymentMethod": "DEBIT_CARD"
+      },
+      "invoice": {
+        "uuid": "INV-UUID-003",
+        "invoiceNumber": "DEC-2025-1122",
+        "status": "VALID",
+        "supplier": {
+          "name": "DECATHLON MALAYSIA SDN BHD",
+          "tin": "C20171234567",
+          "registrationNo": "201701023456"
+        },
+        "lineItems": [
+          {
+            "description": "Climbing Shoes - Vertika",
+            "classificationCode": "47640",
+            "quantity": 1,
+            "unitPrice": 189.00,
+            "taxAmount": 0.00,
+            "totalAmount": 189.00
+          },
+          {
+            "description": "Chalk Bag",
+            "classificationCode": "47640",
+            "quantity": 1,
+            "unitPrice": 61.00,
+            "taxAmount": 0.00,
+            "totalAmount": 61.00
+          }
+        ],
+        "totalAmount": 250.00
+      }
+    }
+  ],
+  "summary": {
+    "totalRecords": 342,
+    "totalOutflow": 45230.00,
+    "totalInflow": 62000.00,
+    "institutionsIncluded": ["MAYBANK", "CIMB"]
+  }
+}
