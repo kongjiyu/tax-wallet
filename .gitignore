@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# nested project (created accidentally during setup)
+/tax-wallet/
+
+# uploaded files (if implementing document upload later)
+/uploads/
