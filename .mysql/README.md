@@ -1,11 +1,11 @@
-# PostgreSQL Schema
+# MySQL Schema
 
-This directory contains the PostgreSQL database artifacts for the Open Finance tax wallet prototype.
+This directory contains the MySQL database artifacts for the Open Finance tax wallet prototype.
 
 ## Files
 
-- `OpenFinanceSchema.sql` defines the relational schema.
-- `generate_mock_openfinance_sql.py` generates PostgreSQL `INSERT` seed data.
+- `OpenFinanceSchema.sql` defines the MySQL relational schema.
+- `generate_mock_mysql_sql.py` generates MySQL-compatible `INSERT` seed data.
 - `mock_openfinance_seed.sql` is the default generated output when the mock-data script is run.
 
 ## Schema Overview
@@ -18,7 +18,7 @@ The schema models a taxpayer's consented open-finance records, linked e-invoice 
 
 `connected_accounts` stores bank accounts that the user has consented to share through open finance. Each account has an institution, masked account reference, consent ID, consent status, and consent expiry.
 
-`financial_records` stores transaction-level records from an open-finance provider. Each transaction belongs to a user and includes the record ID, date, amount, direction, institution, account reference, transaction reference, and payment method.
+`financial_records` stores transaction-level records from an open-finance provider. Each transaction belongs to a user and includes the record ID, transaction date, amount, direction, institution, account reference, transaction reference, and payment method.
 
 `invoices` stores e-invoice metadata linked one-to-one with a financial record. It includes invoice UUID, invoice number, status, supplier identity, total amount, and issue date.
 
@@ -54,37 +54,37 @@ tax_relief_categories
 classification_relief_mapping
 ```
 
+## MySQL Notes
+
+The schema stores UUIDs as `CHAR(36)` and uses `DEFAULT (UUID())`, which requires MySQL 8.0.13 or newer.
+
+The schema uses InnoDB, `utf8mb4`, and explicit foreign-key constraints. The transaction date column is named `transaction_date` to avoid relying on `date` as a column name.
+
 ## Generate Mock Seed Data
 
 From the project root:
 
 ```bash
-python .postgresql/generate_mock_openfinance_sql.py
+python .mysql/generate_mock_mysql_sql.py
 ```
 
 The default output is:
 
 ```text
-.postgresql/mock_openfinance_seed.sql
+.mysql/mock_openfinance_seed.sql
 ```
 
 You can customize the amount of generated data:
 
 ```bash
-python .postgresql/generate_mock_openfinance_sql.py --users 5 --records-per-user 20 --assessment-year YA2025
+python .mysql/generate_mock_mysql_sql.py --users 5 --records-per-user 20 --assessment-year YA2025
 ```
 
-## Load Into PostgreSQL
+## Load Into MySQL
 
 Create the schema first, then load the generated seed data:
 
 ```bash
-psql "$DATABASE_URL" -f .postgresql/OpenFinanceSchema.sql
-psql "$DATABASE_URL" -f .postgresql/mock_openfinance_seed.sql
-```
-
-The schema uses `gen_random_uuid()`, so the target database should have UUID generation support available. If needed, enable `pgcrypto` before creating the tables:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+mysql -u root -p your_database < .mysql/OpenFinanceSchema.sql
+mysql -u root -p your_database < .mysql/mock_openfinance_seed.sql
 ```
