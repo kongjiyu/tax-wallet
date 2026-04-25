@@ -1,5 +1,79 @@
-import { redirect } from 'next/navigation';
+"use client";
+
+import React, { useState } from "react";
+import { AppShell, ScreenType } from "@/components/layout/AppShell";
+import { OnboardingScreen } from "@/components/screens/OnboardingScreen";
+import { ConsentScreen } from "@/components/screens/ConsentScreen";
+import { HomeScreen } from "@/components/screens/HomeScreen";
+import { ActivityScreen } from "@/components/screens/ActivityScreen";
+import { TransactionDetailScreen } from "@/components/screens/TransactionDetailScreen";
+import { WalletScreen } from "@/components/screens/WalletScreen";
+import { UploadScreen } from "@/components/screens/UploadScreen";
+import { ClaimsReviewScreen } from "@/components/screens/ClaimsReviewScreen";
+import { SummaryScreen } from "@/components/screens/SummaryScreen";
+import { ProfileScreen } from "@/components/screens/ProfileScreen";
+import { AnimatePresence, motion } from "framer-motion";
 
 export default function Home() {
-  redirect('/dashboard');
+  const [activeScreen, setActiveScreen] = useState<ScreenType>("onboarding");
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+
+  const handleNavigate = (screen: ScreenType) => {
+    setActiveScreen(screen);
+  };
+
+  const handleTransactionClick = (transaction: any) => {
+    setSelectedTransaction(transaction);
+    setActiveScreen("transaction_detail");
+  };
+
+  const showBottomNav = !["onboarding", "consent", "transaction_detail", "upload"].includes(activeScreen);
+
+  const renderScreen = () => {
+    switch (activeScreen) {
+      case "onboarding":
+        return <OnboardingScreen onGetStarted={() => setActiveScreen("consent")} />;
+      case "consent":
+        return <ConsentScreen onBack={() => setActiveScreen("onboarding")} onConnect={() => setActiveScreen("home")} />;
+      case "home":
+        return <HomeScreen onNavigate={handleNavigate} />;
+      case "activity":
+        return <ActivityScreen onTransactionClick={handleTransactionClick} />;
+      case "transaction_detail":
+        return <TransactionDetailScreen transaction={selectedTransaction} onBack={() => setActiveScreen("activity")} />;
+      case "wallet":
+        return <WalletScreen onUploadClick={() => setActiveScreen("upload")} />;
+      case "upload":
+        return <UploadScreen onBack={() => setActiveScreen("wallet")} />;
+      case "review":
+        return <ClaimsReviewScreen onBack={() => setActiveScreen("home")} />;
+      case "summary":
+        return <SummaryScreen onNavigate={handleNavigate} />;
+      case "profile":
+        return <ProfileScreen />;
+      default:
+        return <HomeScreen onNavigate={handleNavigate} />;
+    }
+  };
+
+  return (
+    <AppShell 
+      activeScreen={activeScreen} 
+      onNavigate={handleNavigate}
+      showBottomNav={showBottomNav}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeScreen}
+          initial={{ opacity: 0, x: 10 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -10 }}
+          transition={{ duration: 0.2 }}
+          className="h-full"
+        >
+          {renderScreen()}
+        </motion.div>
+      </AnimatePresence>
+    </AppShell>
+  );
 }
