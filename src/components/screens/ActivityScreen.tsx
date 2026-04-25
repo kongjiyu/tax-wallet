@@ -29,72 +29,10 @@ const TEST_USER_ID = 'user-001';
 const filterConfig = {
   all: { label: "All", color: "slate" },
   claimable: { label: "Claimable", color: "emerald" },
-  pending: { label: "Pending", color: "amber" },
+  awaiting: { label: "Awaiting", color: "blue" },
+  pending: { label: "Need docs", color: "amber" },
   failed: { label: "Failed", color: "rose" },
 };
-
-const mockTransactions = [
-  {
-    id: 1,
-    merchant: "Apple Store Malaysia",
-    date: "12 Oct",
-    amount: 4299.00,
-    source: "Visa •••• 1234",
-    status: "claimable",
-    category: "Lifestyle",
-    eInvoice: true,
-  },
-  {
-    id: 2,
-    merchant: "AIA Malaysia",
-    date: "10 Oct",
-    amount: 250.00,
-    source: "Maybank",
-    status: "pending",
-    category: "Insurance",
-    eInvoice: false,
-  },
-  {
-    id: 3,
-    merchant: "Popular Bookstore",
-    date: "08 Oct",
-    amount: 128.50,
-    source: "TNG eWallet",
-    status: "claimable",
-    category: "Lifestyle",
-    eInvoice: true,
-  },
-  {
-    id: 4,
-    merchant: "Gym Membership",
-    date: "05 Oct",
-    amount: 120.00,
-    source: "Visa •••• 1234",
-    status: "claimable",
-    category: "Sports",
-    eInvoice: true,
-  },
-  {
-    id: 5,
-    merchant: "Klinik HealthCare",
-    date: "02 Oct",
-    amount: 350.00,
-    source: "Public Bank",
-    status: "pending",
-    category: "Medical",
-    eInvoice: true,
-  },
-  {
-    id: 6,
-    merchant: "Restaurant ABC",
-    date: "01 Oct",
-    amount: 42.00,
-    source: "Cash",
-    status: "failed",
-    category: "Food",
-    eInvoice: false,
-  },
-];
 
 const categoryIcons: Record<string, React.ReactNode> = {
   Lifestyle: <Receipt className="w-5 h-5" />,
@@ -111,6 +49,12 @@ const statusConfig = {
     indicator: "bg-emerald-500",
     icon: <CheckCircle2 className="w-3.5 h-3.5" />
   },
+  awaiting: {
+    label: "Awaiting",
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+    indicator: "bg-blue-500",
+    icon: <AlertCircle className="w-3.5 h-3.5" />
+  },
   pending: {
     label: "Need docs",
     badge: "bg-amber-100 text-amber-700 border-amber-200",
@@ -126,7 +70,7 @@ const statusConfig = {
 };
 
 interface Transaction {
-  id: number;
+  id: string;
   merchant: string;
   date: string;
   amount: number;
@@ -134,6 +78,9 @@ interface Transaction {
   status: string;
   category: string;
   eInvoice: boolean;
+  einvoice?: any;
+  taxReliefCategory?: string;
+  requiresReview?: boolean;
 }
 
 export function ActivityScreen({
@@ -164,38 +111,44 @@ export function ActivityScreen({
 
         if (result.success && result.data && Array.isArray(result.data)) {
           // Transform categorized records to match expected format
-          const transformedTransactions: Transaction[] = result.data.map((item: any, index: number) => {
-            // Determine status based on categorization
-            let status = 'pending';
-            if (item.requiresReview || item.proofRequired === 'required') {
-              status = 'pending';
-            } else if (item.taxReliefCategory && item.incomeCategory === 'non_income') {
+          const transformedTransactions: Transaction[] = result.data.map((item: any) => {
+            // Use database status as source of truth
+            const dbStatus = item.dbStatus;
+
+            // Map database status to activity screen status
+            let status: string;
+            if (dbStatus === 'claimed') {
               status = 'claimable';
-            } else if (item.incomeCategory === 'income' || item.transactionType === 'individual_to_individual') {
+            } else if (dbStatus === 'pending_confirmation') {
+              status = 'awaiting';
+            } else if (dbStatus === 'pending_proof') {
+              status = 'pending';
+            } else if (dbStatus === 'not_claimable') {
               status = 'failed';
+            } else {
+              status = 'pending';
             }
 
             return {
-              id: item.transaction.id || `txn-${index}`,
+              ...item, // Keep all original data (transaction, einvoice, etc.)
+              id: item.transaction.id,
               merchant: item.transaction.counterpartyName || 'Unknown',
               date: item.transaction.date ? new Date(item.transaction.date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short' }) : 'N/A',
               amount: Number(item.transaction.amount) || 0,
               source: item.transaction.source || item.transaction.institution || 'bank',
               status,
               category: item.taxReliefCategory || 'other',
-              eInvoice: false,
+              eInvoice: !!item.einvoice,
             };
           });
           setTransactions(transformedTransactions);
         } else {
-          // Use mock data if no records found
-          setTransactions(mockTransactions);
+          setTransactions([]);
         }
       } catch (err) {
         console.error('Error fetching records:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
-        // Fallback to mock data on error
-        setTransactions(mockTransactions);
+        setTransactions([]);
       } finally {
         setLoading(false);
       }
@@ -283,6 +236,7 @@ export function ActivityScreen({
                       <div className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center",
                         t.status === "claimable" ? "bg-emerald-50 text-emerald-600" :
+                        t.status === "awaiting" ? "bg-blue-50 text-blue-600" :
                         t.status === "pending" ? "bg-amber-50 text-amber-600" :
                         "bg-slate-100 text-slate-400"
                       )}>
@@ -294,6 +248,7 @@ export function ActivityScreen({
                         status.indicator
                       )}>
                         {t.status === "claimable" && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                        {t.status === "awaiting" && <AlertCircle className="w-2.5 h-2.5 text-white" />}
                         {t.status === "pending" && <Clock className="w-2.5 h-2.5 text-white" />}
                         {t.status === "failed" && <XCircle className="w-2.5 h-2.5 text-white" />}
                       </div>

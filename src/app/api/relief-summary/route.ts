@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { categorizeTransaction, Transaction } from '@/lib/tax-relief-algorithm';
-import { getUserReliefSummary, getUserRecords } from '@/lib/db';
+import { getUserReliefSummary, getUserRecords, getRecordInvoice } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,36 +16,83 @@ export async function GET(request: NextRequest) {
 
     // Try to get existing relief summary from database
     const reliefSummaries = await getUserReliefSummary(userId);
+    const records = await getUserRecords(userId);
+
+    // Identify attention items based on status
+    const attentionItems = [];
+    
+    for (const r of records) {
+      if (r.status === 'pending_proof' || r.status === 'pending_confirmation') {
+        const invoice = await getRecordInvoice(r.id) as any;
+        
+        const item: any = {
+          id: r.id,
+          title: r.description || r.institution,
+          merchant: r.institution || 'Unknown',
+          category: r.description?.toLowerCase().includes('insurance') ? 'insurance' :
+                    r.description?.toLowerCase().includes('iphone') ? 'lifestyle' :
+                    r.description?.toLowerCase().includes('sspn') ? 'sspn' : 'lifestyle',
+          amount: `RM ${Number(r.amount).toLocaleString()}`,
+          rawAmount: Number(r.amount),
+          issue: r.status === 'pending_proof' ? 'Statement missing' : 'Confirm eligibility',
+          badge: r.status === 'pending_proof' ? 'Upload' : 'Confirm',
+          status: r.status,
+          date: r.transaction_date,
+          source: r.direction === 'OUTFLOW' ? 'bank' : 'income',
+        };
+
+        if (invoice) {
+          item.einvoice = {
+            id: invoice.id,
+            invoiceNumber: invoice.invoice_number,
+            date: String(invoice.issue_date),
+            sellerName: invoice.supplier_name,
+            buyerName: 'Ji Yu',
+            totalAmount: Number(invoice.total_amount),
+            items: invoice.items.map((ii: any) => ({
+              description: ii.description,
+              quantity: ii.quantity,
+              unitPrice: Number(ii.unit_price),
+              totalPrice: Number(ii.total_amount),
+              category: ii.classification_code === 'TECH' ? 'lifestyle' : 'other'
+            }))
+          };
+        }
+
+        attentionItems.push(item);
+      }
+    }
 
     if (reliefSummaries) {
-      // Also fetch and categorize records to count pending items
-      const records = await getUserRecords(userId);
-      let pendingCount = 0;
+      // 1. Map current status for calculations
+      const quotaMap: Record<string, number> = {};
+      reliefSummaries.forEach((r: any) => {
+        quotaMap[r.relief_code] = Number(r.remaining_quota || 0);
+      });
 
-      if (records.length > 0) {
-        const transactions: Transaction[] = records.map((record: any) => ({
-          id: String(record.id),
-          date: String(record.transaction_date),
-          amount: Number(record.amount),
-          counterpartyName: record.institution || 'Unknown',
-          counterpartyType: record.direction === 'INFLOW' ? 'individual' as const : 'business' as const,
-          description: record.description || record.institution || '',
-          source: 'bank' as const,
-        }));
+      // 2. Calculate actual potential gain from pending items
+      let totalPotential = 0;
+      attentionItems.forEach((item: any) => {
+        // Map frontend category string to database relief codes
+        const possibleReliefCodes = [];
+        if (item.category === 'lifestyle') possibleReliefCodes.push('LIFESTYLE');
+        if (item.category === 'insurance') possibleReliefCodes.push('INSURANCE_LIFE', 'INSURANCE_MEDICAL');
+        if (item.category === 'sspn') possibleReliefCodes.push('SSPN');
+        if (item.category === 'education') possibleReliefCodes.push('EDUCATION_SELF');
 
-        for (const transaction of transactions) {
-          const result = categorizeTransaction(transaction);
-          if (result.requiresReview) {
-            pendingCount++;
-          }
-        }
-      }
+        // Check space left in these categories
+        let maxSpace = 0;
+        possibleReliefCodes.forEach(code => {
+          maxSpace = Math.max(maxSpace, quotaMap[code] || 0);
+        });
 
-      // Transform database records to frontend format
+        // Gain is limited by transaction amount OR quota space
+        const gain = Math.min(item.rawAmount, maxSpace);
+        totalPotential += gain;
+      });
+
       const totalClaimed = reliefSummaries.reduce((sum: number, r: any) => sum + Number(r.claimed_amount || 0), 0);
-      const totalMax = reliefSummaries.reduce((sum: number, r: any) => sum + Number(r.max_amount || 0), 0);
       const totalRemaining = reliefSummaries.reduce((sum: number, r: any) => sum + Number(r.remaining_quota || 0), 0);
-      const totalPotential = totalMax - totalClaimed;
 
       // Map database categories to frontend format
       const categoryMap: Record<string, { key: string; name: string }> = {
@@ -53,9 +100,10 @@ export async function GET(request: NextRequest) {
         MEDICAL_SELF: { key: 'medical', name: 'Medical' },
         SPORTS: { key: 'sports', name: 'Sports' },
         EDUCATION_SELF: { key: 'education', name: 'Education' },
-        INSURANCE_LIFE: { key: 'insurance', name: 'Life Insurance' },
-        INSURANCE_MEDICAL: { key: 'insurance', name: 'Health Insurance' },
-        EPF: { key: 'insurance', name: 'EPF' },
+        INSURANCE_LIFE: { key: 'insurance_life', name: 'Life Insurance' },
+        INSURANCE_MEDICAL: { key: 'insurance_medical', name: 'Health Insurance' },
+        EPF: { key: 'epf', name: 'EPF' },
+        LIFESTYLE: { key: 'lifestyle', name: 'Lifestyle' }
       };
 
       const categories = reliefSummaries.map((r: any) => {
@@ -76,79 +124,28 @@ export async function GET(request: NextRequest) {
           totalRelief: totalClaimed,
           potential: totalPotential,
           remaining: totalRemaining,
-          pendingItems: pendingCount,
+          pendingItems: attentionItems.length,
           categories,
-          attentionItems: pendingCount > 0 ? [{ title: "Items need review", category: "review", amount: `${pendingCount} items`, issue: "Confirm eligibility", badge: "Review" }] : [],
+          attentionItems: attentionItems,
         },
         source: 'database',
       });
     }
 
-    // If no summary, compute from records
-    const records = await getUserRecords(userId);
-
-    if (records.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          user_id: userId,
-          assessment_year: new Date().getFullYear(),
-          categories: [],
-          total_relief_amount: 0,
-          transaction_count: 0,
-        },
-        source: 'empty',
-      });
-    }
-
-    // Transform records to transactions
-    const transactions: Transaction[] = records.map((record: any) => ({
-      id: String(record.id),
-      date: String(record.transaction_date),
-      amount: Number(record.amount),
-      counterpartyName: record.institution || 'Unknown',
-      counterpartyType: record.direction === 'INFLOW' ? 'individual' as const : 'business' as const,
-      description: record.description || record.institution || '',
-      source: 'bank' as const,
-    }));
-
-    // Categorize each transaction
-    let totalRelief = 0;
-    let pendingCount = 0;
-    const categoryTotals: Record<string, number> = {};
-
-    for (const transaction of transactions) {
-      const result = categorizeTransaction(transaction);
-
-      if (result.taxReliefCategory && result.incomeCategory === 'non_income') {
-        const amount = Number(transaction.amount);
-        totalRelief += amount;
-        categoryTotals[result.taxReliefCategory] = (categoryTotals[result.taxReliefCategory] || 0) + amount;
-
-        if (result.requiresReview) {
-          pendingCount++;
-        }
-      }
-    }
-
-    // Build summary response
-    const summary = {
-      user_id: userId,
-      assessment_year: new Date().getFullYear(),
-      categories: Object.entries(categoryTotals).map(([code, amount]) => ({
-        code,
-        amount,
-      })),
-      total_relief_amount: totalRelief,
-      pendingItems: pendingCount,
-      transaction_count: transactions.length,
-    };
-
+    // Fallback logic (if no relief_summary records)
     return NextResponse.json({
       success: true,
-      data: summary,
-      source: 'computed',
+      data: {
+        totalRelief: 0,
+        potential: 0,
+        remaining: 0,
+        pendingItems: attentionItems.length,
+        categories: [],
+        attentionItems: attentionItems,
+      },
+      source: 'database-fallback',
     });
+
   } catch (error) {
     console.error('Error fetching relief summary:', error);
     return NextResponse.json(

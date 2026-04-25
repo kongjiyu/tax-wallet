@@ -27,6 +27,7 @@ export default function Home() {
   const [activeScreen, setActiveScreen] = useState<ScreenType>("onboarding");
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [pendingDoc, setPendingDoc] = useState<{id: string; merchant: string; category: string; amount: number} | null>(null);
 
   const handleNavigate = (screen: ScreenType) => {
     setActiveScreen(screen);
@@ -42,6 +43,11 @@ export default function Home() {
     setActiveScreen("summary");
   };
 
+  const handleUploadFromWallet = (doc?: {id: string; merchant: string; category: string; amount: number}) => {
+    setPendingDoc(doc || null);
+    setActiveScreen("upload");
+  };
+
   const showBottomNav = !["onboarding", "consent", "transaction_detail", "upload"].includes(activeScreen);
 
   const renderScreen = () => {
@@ -51,17 +57,31 @@ export default function Home() {
       case "consent":
         return <ConsentScreen onBack={() => setActiveScreen("onboarding")} onConnect={() => setActiveScreen("home")} />;
       case "home":
-        return <HomeScreen onNavigate={handleNavigate} onCategoryClick={handleCategoryClick} />;
+        return <HomeScreen 
+          onNavigate={(screen, params) => {
+            if (screen === 'transaction_detail') handleTransactionClick(params);
+            else if (screen === 'wallet') handleUploadFromWallet(params);
+            else handleNavigate(screen as ScreenType);
+          }} 
+          onCategoryClick={handleCategoryClick} 
+        />;
       case "activity":
         return <ActivityScreen onTransactionClick={handleTransactionClick} />;
       case "transaction_detail":
         return <TransactionDetailScreen transaction={selectedTransaction} onBack={() => setActiveScreen("activity")} />;
       case "wallet":
-        return <WalletScreen onUploadClick={() => setActiveScreen("upload")} />;
+        return <WalletScreen onUploadClick={(doc) => handleUploadFromWallet(doc)} />;
       case "upload":
-        return <UploadScreen onBack={() => setActiveScreen("wallet")} />;
+        return <UploadScreen onBack={() => { setPendingDoc(null); setActiveScreen("wallet"); }} pendingDoc={pendingDoc} />;
       case "review":
-        return <ClaimsReviewScreen onBack={() => setActiveScreen("home")} />;
+        return <ClaimsReviewScreen 
+          onBack={() => setActiveScreen("home")} 
+          onNavigate={(screen, params) => {
+            if (screen === 'wallet') handleUploadFromWallet(params);
+            else if (screen === 'transaction_detail') handleTransactionClick(params);
+            else setActiveScreen(screen as ScreenType);
+          }} 
+        />;
       case "summary":
         return <SummaryScreen onNavigate={handleNavigate} initialCategory={selectedCategory} onBack={() => setSelectedCategory(null)} />;
       case "profile":

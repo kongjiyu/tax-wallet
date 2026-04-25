@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Scan,
   FileCheck,
+  CreditCard,
   Sparkles,
   TrendingUp,
   Receipt,
@@ -44,6 +45,9 @@ const categoryConfig = {
   sports: { icon: Dumbbell, color: "teal", label: "Sports" },
   medical: { icon: Heart, color: "rose", label: "Medical" },
   insurance: { icon: Umbrella, color: "indigo", label: "Insurance" },
+  insurance_life: { icon: Umbrella, color: "indigo", label: "Life Insurance" },
+  insurance_medical: { icon: Umbrella, color: "indigo", label: "Medical Insurance" },
+  epf: { icon: CreditCard, color: "indigo", label: "EPF" },
   sspn: { icon: Building, color: "amber", label: "SSPN" },
   education: { icon: GraduationCap, color: "slate", label: "Education" },
 };
@@ -93,28 +97,11 @@ const categoryColors = {
   sports: { bg: "bg-teal-500", text: "text-teal-600", light: "bg-teal-50", progress: "bg-teal-500" },
   medical: { bg: "bg-rose-500", text: "text-rose-600", light: "bg-rose-50", progress: "bg-rose-500" },
   insurance: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50", progress: "bg-indigo-500" },
+  insurance_life: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50", progress: "bg-indigo-500" },
+  insurance_medical: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50", progress: "bg-indigo-500" },
+  epf: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50", progress: "bg-indigo-500" },
   sspn: { bg: "bg-amber-500", text: "text-amber-600", light: "bg-amber-50", progress: "bg-amber-500" },
   education: { bg: "bg-slate-400", text: "text-slate-500", light: "bg-slate-50", progress: "bg-slate-400" },
-};
-
-// Mock data for fallback
-const mockData = {
-  totalRelief: 4850,
-  potential: 1420,
-  remaining: 6200,
-  pendingItems: 2,
-  categories: [
-    { key: "lifestyle", name: "Lifestyle", amount: 2300, limit: 2500, status: "almost_full" },
-    { key: "sports", name: "Sports", amount: 600, limit: 1000, status: "available" },
-    { key: "medical", name: "Medical", amount: 450, limit: 10000, status: "available" },
-    { key: "insurance", name: "Insurance", amount: 2000, limit: 3000, status: "needs_info" },
-    { key: "sspn", name: "SSPN", amount: 3500, limit: 8000, status: "filled" },
-    { key: "education", name: "Education", amount: 0, limit: 7000, status: "empty" },
-  ],
-  attentionItems: [
-    { title: "AIA Insurance", category: "insurance", amount: "RM250/mo", issue: "Statement missing", badge: "Upload required" },
-    { title: "Apple Store", category: "lifestyle", amount: "RM4,299", issue: "Confirm personal use", badge: "e-Invoice matched" },
-  ],
 };
 
 const statusConfig = {
@@ -147,7 +134,7 @@ interface ReliefSummary {
 }
 
 interface HomeScreenProps {
-  onNavigate: (screen: any) => void;
+  onNavigate: (screen: any, params?: any) => void;
   onCategoryClick?: (category: { key: string; name: string; amount: number; limit: number; status: string; shortName: string }) => void;
 }
 
@@ -174,15 +161,13 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
             potential: apiData.max_amount || apiData.potential || 0,
             remaining: apiData.remaining_quota || apiData.remaining || 0,
             pendingItems: apiData.pending_items || apiData.pendingItems || 0,
-            categories: apiData.categories || mockData.categories,
+            categories: apiData.categories || [],
             attentionItems: apiData.attention_items || apiData.attentionItems || [],
           });
         }
       } catch (err) {
         console.error('Error fetching relief summary:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
-        // Fallback to mock data on error
-        setData(mockData);
       } finally {
         setLoading(false);
       }
@@ -217,7 +202,7 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
     );
   }
 
-  const displayData = data || mockData;
+  const displayData = data;
 
   return (
     <div className="flex flex-col bg-slate-50 min-h-full pb-10">
@@ -242,7 +227,7 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
           </div>
           <Button variant="ghost" size="icon" className="relative h-11 w-11 rounded-2xl bg-slate-100 text-slate-500 hover:bg-slate-200">
             <Bell className="w-5 h-5" />
-            {displayData.pendingItems > 0 && (
+            {displayData && displayData.pendingItems > 0 && (
               <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full" />
             )}
           </Button>
@@ -270,25 +255,25 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
                   <span className="text-white/80 text-xs font-semibold uppercase tracking-widest">Relief Wallet</span>
                 </div>
                 <Badge className="bg-emerald-400 text-white text-[10px] font-semibold px-3 py-1 rounded-full shadow-sm">
-                  <CheckCircle2 className="w-3 h-3 mr-1" /> {displayData.pendingItems} to review
+                  <CheckCircle2 className="w-3 h-3 mr-1" /> {displayData?.pendingItems || 0} to review
                 </Badge>
               </div>
 
               <div className="mb-5">
                 <p className="text-white/50 text-[10px] font-semibold uppercase tracking-widest mb-1">Ready to Claim</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-bold text-white tracking-tight">RM {displayData.totalRelief.toLocaleString()}</span>
+                  <span className="text-5xl font-bold text-white tracking-tight">RM {(displayData?.totalRelief || 0).toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-5 py-4 border-t border-white/20">
                 <div>
                   <p className="text-white/50 text-[10px] font-semibold uppercase tracking-widest mb-1">Potential</p>
-                  <p className="text-xl font-bold text-emerald-300">+RM {displayData.potential.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-emerald-300">+RM {(displayData?.potential || 0).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-white/50 text-[10px] font-semibold uppercase tracking-widest mb-1">Remaining</p>
-                  <p className="text-xl font-bold text-white">RM {displayData.remaining.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-white">RM {(displayData?.remaining || 0).toLocaleString()}</p>
                 </div>
               </div>
 
@@ -339,17 +324,17 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-slate-900">Pending Tasks</h2>
             <div className="h-5 w-px bg-slate-200" />
-            <span className="text-xs text-slate-400 font-medium">{displayData.attentionItems.length} items require your action</span>
+            <span className="text-xs text-slate-400 font-medium">{displayData?.attentionItems?.length || 0} items require your action</span>
           </div>
 
           <div className="space-y-2">
-            {displayData.attentionItems.length === 0 ? (
+            {(displayData?.attentionItems?.length || 0) === 0 ? (
               <div className="p-6 bg-white rounded-xl border border-slate-200 text-center">
                 <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
                 <p className="text-sm text-slate-500">No pending tasks</p>
               </div>
             ) : (
-              displayData.attentionItems.map((item, index) => {
+              displayData?.attentionItems?.map((item: any, index: number) => {
                 const catConfig = categoryConfig[item.category as keyof typeof categoryConfig];
                 const IconComponent = catConfig?.icon || BookOpen;
                 const isFirst = index === 0;
@@ -366,7 +351,7 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
                     </div>
 
                     {/* Connection line between items */}
-                    {index < displayData.attentionItems.length - 1 && (
+                    {index < (displayData?.attentionItems?.length || 0) - 1 && (
                       <div className="absolute left-[10px] top-full w-0.5 h-3 bg-slate-200" />
                     )}
 
@@ -385,11 +370,21 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-slate-500 font-medium">{item.amount}</span>
                           <Button
-                            onClick={() => onNavigate("review")}
+                            onClick={() => {
+                              if (item.status === 'pending_proof') {
+                                onNavigate("wallet", item);
+                              } else {
+                                // For pending_confirmation (like iPhone), pass full item with einvoice
+                                onNavigate("transaction_detail", {
+                                  ...item,
+                                  amount: item.rawAmount // Use raw number for detail screen
+                                });
+                              }
+                            }}
                             size="sm"
                             className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium"
                           >
-                            {item.badge.split(' ')[0]} <ChevronRight className="w-3 h-3 ml-1" />
+                            {item.badge} <ChevronRight className="w-3 h-3 ml-1" />
                           </Button>
                         </div>
                       </div>
@@ -416,18 +411,18 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
 
           {/* Horizontal scrolling list - more like a real wallet view */}
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 scrollbar-hide">
-            {displayData.categories.map((cat) => {
+            {(displayData?.categories || []).map((cat: any, index: number) => {
               const catColors = categoryColors[cat.key as keyof typeof categoryColors] || categoryColors.lifestyle;
               const status = statusConfig[cat.status as keyof typeof statusConfig] || statusConfig.available;
               const statusColors = colors[status.variant];
-              const pct = cat.limit > 0 ? (cat.amount / cat.limit) * 100 : 0;
-              const remaining = cat.limit - cat.amount;
+              const pct = (cat.limit || 0) > 0 ? ((cat.amount || 0) / (cat.limit || 0)) * 100 : 0;
+              const remaining = (cat.limit || 0) - (cat.amount || 0);
 
               return (
                 <motion.button
-                  key={cat.name}
+                  key={cat.key || cat.name || `cat-${index}`}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => onCategoryClick?.({ ...cat, shortName: cat.name.substring(0, 4) })}
+                  onClick={() => onCategoryClick?.({ ...cat, shortName: (cat.name || '').substring(0, 4) })}
                   className="flex-shrink-0 w-40 bg-white rounded-2xl p-4 border border-slate-200 shadow-sm text-left"
                 >
                   {/* Category header */}
@@ -435,12 +430,12 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${catColors.light} ${catColors.text}`}>
                       {React.createElement(categoryConfig[cat.key as keyof typeof categoryConfig]?.icon || BookOpen, { className: "w-4 h-4" })}
                     </div>
-                    <span className="text-sm font-semibold text-slate-900">{cat.name}</span>
+                    <span className="text-sm font-semibold text-slate-900">{cat.name || 'Unknown'}</span>
                   </div>
 
                   {/* Amount display */}
-                  <p className="text-lg font-bold text-slate-900 mb-1">RM {cat.amount.toLocaleString()}</p>
-                  <p className="text-[10px] text-slate-400 mb-3">of RM {cat.limit.toLocaleString()}</p>
+                  <p className="text-lg font-bold text-slate-900 mb-1">RM {(cat.amount || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-slate-400 mb-3">of RM {(cat.limit || 0).toLocaleString()}</p>
 
                   {/* Mini progress */}
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-2">
@@ -458,42 +453,8 @@ export function HomeScreen({ onNavigate, onCategoryClick }: HomeScreenProps) {
           </div>
         </motion.div>
 
-        {/* Opportunity Card - Integrated naturally as a notification */}
-        <motion.div variants={stagger.item}>
-          <div className="relative overflow-hidden rounded-2xl bg-blue-600 border border-blue-500">
-            {/* Decorative pattern */}
-            <div className="absolute inset-0 opacity-10">
-              <svg className="w-full h-full" viewBox="0 0 200 80">
-                <path d="M0 40 Q 50 20 100 40 T 200 40" stroke="white" strokeWidth="2" fill="none" />
-                <path d="M0 60 Q 50 40 100 60 T 200 60" stroke="white" strokeWidth="1" fill="none" />
-              </svg>
-            </div>
-
-            <div className="relative z-10 p-4">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  {/* Emoji-style icon instead of generic icon */}
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <Dumbbell className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-blue-100 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Unused Relief</p>
-                    <h3 className="text-white font-semibold text-sm mb-1">Sports Relief: RM 400 left</h3>
-                    <p className="text-blue-200 text-xs leading-relaxed">Gym, badminton, equipment may be claimable under LHDN rules.</p>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => onNavigate("wallet")}
-                  className="flex-shrink-0 h-8 px-3 rounded-lg bg-white text-blue-600 hover:bg-blue-50 text-xs font-semibold"
-                >
-                  Claim
-                </Button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
         {/* Footer hint */}
+
         <motion.div variants={stagger.item} className="text-center py-4">
           {error ? (
             <p className="text-xs text-amber-500 font-medium">Using cached data. {error}</p>

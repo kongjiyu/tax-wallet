@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Info,
   ArrowRight,
+  Sparkles,
   ExternalLink,
   TrendingUp,
   Receipt,
@@ -33,15 +34,6 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const TEST_USER_ID = 'user-001';
 
-const mockCategories = [
-  { key: "lifestyle", name: "Lifestyle", amount: 2300, limit: 2500, status: "Claimable", shortName: "Life" },
-  { key: "sports", name: "Sports", amount: 600, limit: 1000, status: "Claimable", shortName: "Sport" },
-  { key: "medical", name: "Medical", amount: 450, limit: 10000, status: "Claimable", shortName: "Med" },
-  { key: "insurance", name: "Insurance", amount: 2000, limit: 3000, status: "Verified", shortName: "Ins" },
-  { key: "sspn", name: "SSPN", amount: 3500, limit: 8000, status: "Verified", shortName: "SSPN" },
-  { key: "education", name: "Education", amount: 0, limit: 7000, status: "Empty", shortName: "Edu" },
-];
-
 const statusConfig = {
   Claimable: { badge: "bg-emerald-50 text-emerald-600 border-emerald-200", dot: "bg-emerald-500", label: "Claimable" },
   Verified: { badge: "bg-blue-50 text-blue-600 border-blue-200", dot: "bg-blue-500", label: "Verified" },
@@ -56,6 +48,8 @@ const categoryIcons: Record<string, React.ReactNode> = {
   sports: <Dumbbell className="w-5 h-5" />,
   medical: <Heart className="w-5 h-5" />,
   insurance: <Umbrella className="w-5 h-5" />,
+  insurance_life: <Umbrella className="w-5 h-5" />,
+  insurance_medical: <Umbrella className="w-5 h-5" />,
   sspn: <Building className="w-5 h-5" />,
   education: <GraduationCap className="w-5 h-5" />,
   epf: <CreditCard className="w-5 h-5" />,
@@ -66,6 +60,8 @@ const categoryColors: Record<string, { bg: string; text: string; light: string }
   sports: { bg: "bg-teal-500", text: "text-teal-600", light: "bg-teal-50" },
   medical: { bg: "bg-rose-500", text: "text-rose-600", light: "bg-rose-50" },
   insurance: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50" },
+  insurance_life: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50" },
+  insurance_medical: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50" },
   sspn: { bg: "bg-amber-500", text: "text-amber-600", light: "bg-amber-50" },
   education: { bg: "bg-slate-500", text: "text-slate-600", light: "bg-slate-50" },
   epf: { bg: "bg-indigo-500", text: "text-indigo-600", light: "bg-indigo-50" },
@@ -96,7 +92,7 @@ interface SummaryScreenProps {
 }
 
 export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: SummaryScreenProps) {
-  const [categories, setCategories] = useState<Category[]>(mockCategories);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [totalClaimed, setTotalClaimed] = useState(0);
   const [totalLimit, setTotalLimit] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -119,7 +115,7 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
           const apiData = result.data;
 
           // Transform API categories to match expected format
-          let transformedCategories: Category[];
+          let transformedCategories: Category[] = [];
 
           if (apiData.categories && Array.isArray(apiData.categories)) {
             transformedCategories = apiData.categories.map((cat: any) => ({
@@ -130,8 +126,6 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
               status: cat.status || 'Empty',
               shortName: (cat.name || cat.key || 'Unknown').substring(0, 4),
             }));
-          } else {
-            transformedCategories = mockCategories;
           }
 
           setCategories(transformedCategories);
@@ -145,11 +139,9 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
       } catch (err) {
         console.error('Error fetching relief summary:', err);
         setError(err instanceof Error ? err.message : 'Failed to load data');
-        setCategories(mockCategories);
-        const claimed = mockCategories.reduce((sum, c) => sum + c.amount, 0);
-        const limit = mockCategories.reduce((sum, c) => sum + c.limit, 0);
-        setTotalClaimed(claimed);
-        setTotalLimit(limit);
+        setCategories([]);
+        setTotalClaimed(0);
+        setTotalLimit(0);
       } finally {
         setLoading(false);
       }
@@ -174,26 +166,31 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
       if (result.success && result.data) {
         // Map category keys to tax relief categories
         const categoryMapping: Record<string, string[]> = {
-          medical: ['medical_expenses', 'medical_education_expenses'],
-          sports: ['sports_expenses', 'gym_expenses'],
-          sspn: ['provident_fund'],
-          education: ['education_fees', 'postgraduate_study'],
-          insurance: ['life_insurance', 'medical_insurance', 'education_insurance'],
-          lifestyle: ['books_journals', 'broadband_internet', 'handphone', 'computer_laptop'],
+          medical: ['medical_expenses', 'medical_education_expenses', 'MEDICAL_SELF'],
+          sports: ['sports_expenses', 'gym_expenses', 'SPORTS'],
+          sspn: ['provident_fund', 'SSPN'],
+          education: ['education_fees', 'postgraduate_study', 'EDUCATION_SELF'],
+          insurance: ['life_insurance', 'medical_insurance', 'education_insurance', 'INSURANCE_LIFE', 'INSURANCE_MEDICAL', 'LIFE_INSURANCE', 'EDUCATION_MEDICAL_INSURANCE'],
+          insurance_life: ['life_insurance', 'INSURANCE_LIFE', 'LIFE_INSURANCE'],
+          insurance_medical: ['medical_insurance', 'INSURANCE_MEDICAL', 'EDUCATION_MEDICAL_INSURANCE'],
+          epf: ['provident_fund', 'EPF'],
+          lifestyle: ['books_journals', 'broadband_internet', 'handphone', 'computer_laptop', 'LIFESTYLE'],
         };
 
         const validCategories = categoryMapping[category.key] || [category.key];
 
-        // Filter transactions for this category
+        // Filter transactions for this category AND ensure they are claimed/verified
         const filtered = result.data.filter((item: any) => {
-          return item.taxReliefCategory && validCategories.includes(item.taxReliefCategory);
+          const isCorrectCategory = item.taxReliefCategory && validCategories.includes(item.taxReliefCategory);
+          const isClaimed = item.dbStatus === 'claimed';
+          return isCorrectCategory && isClaimed;
         });
 
         const transactions: TransactionItem[] = filtered.map((item: any, index: number) => ({
           id: item.transaction.id || `txn-${index}`,
           date: item.transaction.date ? new Date(item.transaction.date).toLocaleDateString('en-MY', { day: '2-digit', month: 'short' }) : 'N/A',
           merchant: item.transaction.counterpartyName || 'Unknown',
-          amount: Number(item.transaction.amount) || 0,
+          amount: Number(item.claimedAmount !== null ? item.claimedAmount : item.transaction.amount) || 0,
           status: item.requiresReview ? 'pending' : 'verified',
           description: item.transaction.description || '',
         }));
@@ -231,8 +228,8 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
   if (selectedCategory) {
     const colors = categoryColors[selectedCategory.key] || categoryColors.lifestyle;
     const status = statusConfig[selectedCategory.status as keyof typeof statusConfig] || statusConfig.Empty;
-    const remaining = selectedCategory.limit - selectedCategory.amount;
-    const pct = selectedCategory.limit > 0 ? (selectedCategory.amount / selectedCategory.limit) * 100 : 0;
+    const remaining = (selectedCategory.limit ?? 0) - (selectedCategory.amount ?? 0);
+    const pct = (selectedCategory.limit ?? 0) > 0 ? ((selectedCategory.amount ?? 0) / (selectedCategory.limit ?? 0)) * 100 : 0;
 
     return (
       <div className="flex flex-col bg-slate-50 min-h-full pb-10">
@@ -274,7 +271,7 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
               <div className="mb-4">
                 <p className="text-xs text-slate-400 font-medium mb-1">Claimed Amount</p>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-slate-900">RM {selectedCategory.amount.toLocaleString()}</span>
+                  <span className="text-3xl font-bold text-slate-900">RM {(selectedCategory.amount ?? 0).toLocaleString()}</span>
                 </div>
               </div>
 
@@ -290,7 +287,7 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
                   />
                 </div>
                 <div className="flex justify-between mt-1">
-                  <span className="text-[10px] text-slate-400">RM {selectedCategory.amount.toLocaleString()} claimed</span>
+                  <span className="text-[10px] text-slate-400">RM {(selectedCategory.amount ?? 0).toLocaleString()} claimed</span>
                   <span className="text-[10px] text-slate-400">RM {remaining.toLocaleString()} remaining</span>
                 </div>
               </div>
@@ -298,7 +295,7 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-slate-50 rounded-xl">
                   <p className="text-[10px] text-slate-400 mb-1">Limit</p>
-                  <p className="text-sm font-bold text-slate-900">RM {selectedCategory.limit.toLocaleString()}</p>
+                  <p className="text-sm font-bold text-slate-900">RM {(selectedCategory.limit ?? 0).toLocaleString()}</p>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl">
                   <p className="text-[10px] text-slate-400 mb-1">Remaining</p>
@@ -307,6 +304,48 @@ export function SummaryScreen({ onNavigate, initialCategory = null, onBack }: Su
               </div>
             </Card>
           </motion.div>
+
+          {/* Recommendations for Sports Category */}
+          {selectedCategory.key === 'sports' && (selectedCategory.limit - selectedCategory.amount > 0) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              <Card className="p-5 rounded-2xl bg-teal-50 border border-teal-100 mb-6 overflow-hidden relative group">
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                  <TrendingUp size={64} className="text-teal-600" />
+                </div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-teal-600" />
+                    </div>
+                    <h4 className="text-sm font-bold text-teal-900 uppercase tracking-wider">Suggested for you</h4>
+                  </div>
+                  <p className="text-xs text-teal-800 font-medium mb-4 leading-relaxed">
+                    You have <span className="font-bold">RM {(selectedCategory.limit - selectedCategory.amount).toLocaleString()}</span> remaining in Sports relief. Claim back your spending on:
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {[
+                      { name: 'Gym Membership', icon: '🏋️' },
+                      { name: 'Sports Equipment', icon: '🏸' },
+                      { name: 'Event Registration', icon: '🏃' },
+                      { name: 'Court Bookings', icon: '🎾' }
+                    ].map(item => (
+                      <div key={item.name} className="flex items-center gap-2 p-2 bg-white/60 rounded-xl border border-teal-100/50">
+                        <span className="text-sm">{item.icon}</span>
+                        <span className="text-[10px] font-bold text-teal-800">{item.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Button className="w-full h-10 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs shadow-md shadow-teal-900/10">
+                    Browse Sports Deals <ArrowRight className="w-3 h-3 ml-2" />
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Transactions List */}
           <motion.div

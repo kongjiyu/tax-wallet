@@ -441,12 +441,12 @@ export const TAX_RELIEF_KEYWORDS: Record<TaxReliefCategory, string[]> = {
 
   life_insurance: [
     'life insurance', 'takaful hayat', 'insurance premium', 'insurans hayat',
-    'endowment', 'policy'
+    'endowment', 'policy', 'great eastern', 'aia', 'prudential', 'premium'
   ],
 
   medical_insurance: [
     'medical insurance', 'health insurance', 'medical card', 'hospital insurance',
-    'takaful kesehatan', 'insurans perubatan', 'health card'
+    'takaful kesehatan', 'insurans perubatan', 'health card', 'medical/life'
   ],
 
   education_insurance: [
@@ -490,7 +490,7 @@ export const TAX_RELIEF_KEYWORDS: Record<TaxReliefCategory, string[]> = {
 
   books_journals: [
     'book', 'books', 'journal', 'newspaper', 'buku', 'majalah',
-    'ebook', 'e-book', 'online subscription'
+    'ebook', 'e-book', 'online subscription', 'educational books'
   ],
 
   sports_expenses: [
@@ -499,11 +499,11 @@ export const TAX_RELIEF_KEYWORDS: Record<TaxReliefCategory, string[]> = {
   ],
 
   gym_expenses: [
-    'gym', 'fitness', 'gym membership', 'kebugaran', 'fitness membership'
+    'gym', 'fitness', 'gym membership', 'kebugaran', 'fitness membership', 'membership', 'monthly membership'
   ],
 
   handphone: [
-    'handphone', 'smartphone', 'mobile phone', 'hp', 'phone purchase'
+    'handphone', 'smartphone', 'mobile phone', 'hp', 'phone purchase', 'iphone'
   ],
 
   computer_laptop: [
@@ -640,6 +640,7 @@ export interface CategorizedTransaction {
   requiresReview: boolean;
   reviewReason?: string;
   keywordsMatched?: string[];
+  dbStatus?: string;
 }
 
 // ============================================================================

@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS financial_records (
     transaction_ref VARCHAR(100),
     payment_method VARCHAR(30),
     description VARCHAR(500),
+    status VARCHAR(20) DEFAULT 'pending_proof',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -157,15 +158,10 @@ INSERT INTO users (id, name, tin, filing_status, assessment_year) VALUES
 ('user-001', 'Ji Yu', 'TIN123456789', 'SINGLE', 'YA2025');
 
 -- Insert financial records for test user
-INSERT INTO financial_records (id, user_id, record_id, transaction_date, amount, direction, institution, account_ref, description) VALUES
-('rec-001', 'user-001', 'TXN-001', '2025-10-15', 4500.00, 'OUTFLOW', 'Maybank', '****1234', 'SSPN Contribution October'),
-('rec-002', 'user-001', 'TXN-002', '2025-10-12', 2500.00, 'OUTFLOW', 'Maybank', '****1234', 'Medical Checkup Hospital'),
-('rec-003', 'user-001', 'TXN-003', '2025-10-08', 128.50, 'OUTFLOW', 'TNG eWallet', '****5678', 'Popular Bookstore Book'),
-('rec-004', 'user-001', 'TXN-004', '2025-10-05', 120.00, 'OUTFLOW', 'Maybank', '****1234', 'Gym Membership Fitness First'),
-('rec-005', 'user-001', 'TXN-005', '2025-10-02', 350.00, 'OUTFLOW', 'Public Bank', '****9012', 'Klinik HealthCare Consultation'),
-('rec-006', 'user-001', 'TXN-006', '2025-09-28', 299.00, 'OUTFLOW', 'Shopee', '****3456', 'Sports Equipment Running Shoes'),
-('rec-007', 'user-001', 'TXN-007', '2025-09-20', 89.00, 'OUTFLOW', 'Grab', '****7890', 'Taxi Transport'),
-('rec-008', 'user-001', 'TXN-008', '2025-09-15', 250.00, 'INFLOW', 'Employer ABC', '****0001', 'Salary September');
+INSERT INTO financial_records (id, user_id, record_id, transaction_date, amount, direction, institution, account_ref, description, status) VALUES
+('rec-001', 'user-001', 'TXN-001', '2025-10-15', 4500.00, 'OUTFLOW', 'Maybank', '****1234', 'SSPN Contribution October', 'claimed'),
+('rec-009', 'user-001', 'TXN-009', '2025-08-01', 6000.00, 'OUTFLOW', 'Great Eastern', '****9999', 'Insurance Premium Paid Statement', 'pending_proof'),
+('rec-011', 'user-001', 'TXN-011', '2025-10-20', 4500.00, 'OUTFLOW', 'Education Store', '****5555', 'Computer for University Course', 'pending_confirmation');
 
 -- Insert tax relief categories
 INSERT INTO tax_relief_categories (id, assessment_year, relief_code, category_name, max_amount, description) VALUES
@@ -181,7 +177,7 @@ INSERT INTO tax_relief_categories (id, assessment_year, relief_code, category_na
 -- Insert relief summary
 INSERT INTO relief_summary (id, user_id, assessment_year, relief_code, max_amount, claimed_amount, remaining_quota, item_count) VALUES
 ('rs-001', 'user-001', 'YA2025', 'SSPN', 8000.00, 4500.00, 3500.00, 1),
-('rs-002', 'user-001', 'YA2025', 'MEDICAL_SELF', 10000.00, 2500.00, 7500.00, 1),
-('rs-003', 'user-001', 'YA2025', 'SPORTS', 1000.00, 419.00, 581.00, 2);
+('rs-002', 'user-001', 'YA2025', 'INSURANCE_LIFE', 3000.00, 0.00, 3000.00, 0),
+('rs-003', 'user-001', 'YA2025', 'EDUCATION_SELF', 7000.00, 0.00, 2500.00, 1);
 
 SELECT 'Schema and seed data created successfully!' as status;
