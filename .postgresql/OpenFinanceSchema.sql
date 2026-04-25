@@ -141,3 +141,4 @@ CREATE TABLE relief_summary (
     item_count INT DEFAULT 0,
     last_updated TIMESTAMP DEFAULT NOW(),
     UNIQUE(user_id, assessment_year, relief_code)
+);
