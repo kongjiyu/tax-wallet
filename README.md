@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# taxWallet 💰
 
-## Getting Started
+**AI-Powered Open Finance Tax Relief Wallet for Malaysia**
 
-First, run the development server:
+taxWallet is a Malaysian personal tax relief wallet that uses the Open Finance concept to securely collect user financial transaction data from multiple banks, e-wallets, credit cards, and financial accounts with user consent. It helps Malaysians track, verify, and prepare their personal tax relief claims seamlessly throughout the year.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🚀 Features
+
+- **Open Finance Integration**: Safely collect transaction data from multiple financial sources.
+- **e-Invoice Matching**: Cross-check transactions with e-Invoice records (LHDN MyInvois) and uploaded receipts to determine claimability.
+- **AI Document Extraction**: AI engine classifies, explains, and extracts item-level details from uploaded supporting documents.
+- **Tax Relief Dashboard**: Real-time estimates for individual income tax relief based on the latest LHDN rules.
+- **Recommendation Engine**: Automatically recommend relevant categorizations or actionable insights for unused tax reliefs.
+- **Final Tax Relief Summary**: Export a formatted guide that users can easily key into the LHDN MyTax / e-Filing platform.
+
+---
+
+## 🏗 Architecture & Tech Stack
+
+This project is built using a modern, mobile-first web architecture:
+
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4 with CSS variables & shadcn/ui components
+- **Database**: Cloud MySQL via Prisma ORM
+- **Animations**: framer-motion
+
+### System Architecture Diagram
+
+```mermaid
+graph TD
+    User([User]) -->|Interacts with| Frontend(Next.js 16 AppShell)
+    
+    subgraph Frontend
+        Frontend -->|State| ScreenMgr[Screen Manager]
+        ScreenMgr --> Screens[Screens: Dashboard, Wallet, Summary, etc.]
+    end
+    
+    subgraph Backend Services & APIs
+        Screens --> API[Next.js API Routes]
+        API --> DB[(Cloud MySQL / Prisma)]
+        API -->|AI Extraction| AIEngine[AI Receipt Analysis]
+    end
+
+    subgraph External Integrations
+        API -->|Open Finance API| Banks[Bank & E-Wallet Data]
+        API -->|MyInvois APIs| LHDN[LHDN e-Invoices]
+    end
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## ⚙️ Setup Instructions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Prerequisites
+- Node.js (>= 18.x)
+- npm, yarn, or pnpm
+- A Cloud MySQL database connection string
 
-## Learn More
+### 1. Clone the repository
+```bash
+git clone https://github.com/kongjiyu/tax-wallet.git
+cd tax-wallet
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 2. Install dependencies
+```bash
+npm install
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 3. Environment Variables
+Create a `.env` file in the root directory and add your configurations (e.g., database connection URL).
+```env
+DATABASE_URL="mysql://username:password@host:port/database"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Database Setup
+Push the Prisma schema to your Cloud MySQL database:
+```bash
+npx prisma db push
+```
 
-## Deploy on Vercel
+### 5. Run the Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) with your browser to view the application.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📱 Navigation & Screens
+
+taxWallet uses a **Screen-Based Navigation** pattern via `AppShell` instead of traditional file-based routing to ensure a fluid mobile-first experience. Key screens include:
+- `OnboardingScreen`
+- `HomeScreen` (Dashboard)
+- `ActivityScreen` (Transaction history)
+- `WalletScreen` (Document/Proof management)
+- `SummaryScreen` (Tax relief summary)
+
